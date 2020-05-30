@@ -1,2 +1,0 @@
-     | NAME   { printf("\tFound inner stuff %s\n", $1); } // value node!!!!  
-     | NBR    { printf("\tFound inner stuff %d\n", $1); } // value node!!!! 
