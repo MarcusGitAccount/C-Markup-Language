@@ -1,0 +1,33 @@
+- program overall
+
+<program>
+
+</program>
+
+- function
+
+<function>
+
+</function>
+
+- function call
+
+<call for="assign">
+  <left>
+    <variable>x</variable>
+  </left>
+  <right>
+    <value>
+    <call for="map">
+      <arguments>
+        <argument name="tensor">
+          <variable>x</variable>
+        </argument>
+        <argument>
+          
+        </argument>
+      </arguments>
+    </call>
+    </value>
+  </right>
+</call>

@@ -1,0 +1,33 @@
+<unu>
+  <doi>
+    <tre></tre>
+    <trois simple="yes"/>
+    <patru>
+      <cinci>
+        <sase>6</sase>
+        <sapte>7</sapte>
+        <optime>
+          <noua>9</noua>
+        </optime>
+      </cinci>
+    </patru>
+  </doi>
+  <zece>
+  </zece>
+  <unsprezece>
+    <doispe>
+      <treispe>
+        <paispe>
+          <cinspece>
+            <saispe>
+              <saptespe><opspe value="18" empty="">18</opspe></saptespe>
+            </saispe>
+          </cinspece>
+        </paispe>
+      </treispe>
+    </doispe>
+  </unsprezece>
+  <douazeci>
+  20
+  </douazeci>
+</unu>

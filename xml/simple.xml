@@ -1,0 +1,42 @@
+<program>
+  <assign to="x">
+    <add>
+      <var>x</var>
+      <value>4</value>
+    </add>
+  </assign>
+
+  <assign to="v">
+    <vector>
+      <value>1</value>
+      <value>2</value>
+      <value>3</value>
+      <value>4</value>
+    </vector>
+  </assign>
+
+  <assign to="w">
+    <generate>
+      <size>
+        <var>x</var>
+      </size>
+      <low>
+        <value>1</value>
+      </low>
+      <high>
+        <value>5</value>
+      </high>
+    </generate>
+  </assign>
+
+  <assign to="z">
+    <add>
+      <var>v</var>
+      <var>w</var>
+    </add>
+  </assign>
+
+  <return>
+    <value>0</value>
+  </return>
+</program>

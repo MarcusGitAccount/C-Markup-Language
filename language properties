@@ -1,0 +1,31 @@
+
+Linear algebra programming language for tensor operations
+
+Supported operations:
+
+- read/write files
+- printing
+- tensor * scalar
+- tensor + tensor
+- tensor - tensor
+- tensor * tensor (element wise multiplication)
+- transpose(tensor)
+- dot(tensor, tensor)
+- norm(tensor)
+- reshape(tensor)
+- slicing?
+- broadcasting?
+- generate tensortor of random size
+
+Operators:
+
+- map
+- filter
+- random
+
+Language specs:
+
+- purely functional
+- xml based
+- working by default with floating numbers
+- pipelined
