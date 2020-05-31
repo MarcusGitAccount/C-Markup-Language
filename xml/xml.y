@@ -10,6 +10,13 @@ typedef enum {false, true} bool_t;
 
 typedef enum {TAG, ATTR, VALUE} nodetype_t;
 
+typedef enum {VECTOR, INTEGER} vartype_t;
+
+typedef struct _vector {
+  int rows, cols;
+  int **data;
+} vector_t;
+
 typedef struct _node {
   char *name;
   int *nbr;
@@ -18,6 +25,18 @@ typedef struct _node {
   struct _node *siblings;
   struct _node *children;
 } node_t;
+
+typedef union _var {
+  int integer;
+  vector_t *vector;
+} var_t;
+
+typedef struct _var_container {
+  var_t data;
+  vartype_t type;
+} var_container_t;
+
+var_container_t variables[26];
 
 char *stack[STACK_SIZE];
 int sp;
@@ -32,6 +51,10 @@ int* get_int(int n);
 node_t* create_val_nbr(int nbr);
 node_t* create_val_name(char* name);
 void print_node(node_t *node, int indent);
+
+var_container_t eval_vector() {
+  
+}
 
 %}
 
