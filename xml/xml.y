@@ -5,6 +5,13 @@
 #include <assert.h>
 
 #define STACK_SIZE 200
+// #define __LOGGING__ 1
+
+#ifdef __LOGGING__
+	#define log(f, ...) printf(f, ##__VA_ARGS__)
+#else
+	#define log(f, ...)
+#endif
 
 typedef enum {false, true} bool_t;
 
@@ -52,9 +59,17 @@ node_t* create_val_nbr(int nbr);
 node_t* create_val_name(char* name);
 void print_node(node_t *node, int indent);
 
-var_container_t eval_vector() {
-  
-}
+int lenght(node_t* node);
+
+var_container_t make_integer_container(int integer);
+var_container_t make_vector_container(vector_t* vector);
+
+var_container_t eval_node(node_t* node);
+
+var_container_t eval_vector(node_t *node, var_container_t* below);
+var_container_t eval_integer(node_t *node, var_container_t* below);
+var_container_t eval_print(node_t *node, var_container_t* below);
+var_container_t eval_var(node_t *node, var_container_t* below);
 
 %}
 
@@ -73,7 +88,7 @@ var_container_t eval_vector() {
 
 %%
 
-xml: xml tag { print_node($2, 0); }
+xml: xml tag { print_node($2, 0); eval_node($2); }
    |
    ;
 
@@ -113,7 +128,110 @@ value: NBR  { $$ = create_val_nbr($1); }
 %%
 
 void yyerror(char* msg) {
-  printf("%s\n", msg);
+  printf("Syntax error: %s\n", msg);
+}
+
+int lenght(node_t* node) {
+  int len = 0;
+
+  for (node_t* curr = node; curr; curr = curr->siblings) {
+    len += 1;
+  }
+
+  return len;
+}
+
+var_container_t make_integer_container(int integer) {
+  var_container_t container;
+
+  container.data.integer = integer;
+  container.type = INTEGER;
+  return container;
+}
+
+var_container_t make_vector_container(vector_t* vector) {
+  var_container_t container;
+
+  container.data.vector = vector;
+  container.type = VECTOR;
+  return container;
+}
+
+var_container_t eval_vector(node_t *node, var_container_t* below) {
+  return make_integer_container(true);
+}
+var_container_t eval_integer(node_t *node, var_container_t* below) {
+  if (!node->children->nbr) {
+    yyerror("Invalid integer.");
+    return make_integer_container(false);
+  }
+
+  return make_integer_container(*(node->children->nbr));
+}
+
+var_container_t eval_print(node_t *node, var_container_t* below) {
+  int len = lenght(node->children);
+
+  log("Print len: %d", len);
+  if (len != 1) {
+    yyerror("Print takes only one argument");
+    return make_integer_container(false);
+  }
+  if (below[0].type == INTEGER) {
+    printf("%d\n", below[0].data.integer);
+  }
+
+
+  return make_integer_container(true);
+}
+
+var_container_t eval_var(node_t *node, var_container_t* below) {
+  char *name = node->children->name;
+
+  if (strlen(name) != 1) {
+    yyerror("Variable name should consist of only one lowercase letter.");
+    return make_integer_container(false);
+  }
+
+  if (name[0] < 'a' || name[0] > 'z') {
+    yyerror("Variable name should consist of only one lowercase letter.");
+    return make_integer_container(false);
+  }
+  
+  int index = node->name[0] - 'a';
+
+  return variables[index];
+}
+
+var_container_t eval_node(node_t* node) {
+  if (!node || !node->name) {
+    return make_integer_container(false);
+  }
+
+  int len = lenght(node->children);
+  var_container_t* below = (var_container_t*)malloc(len * sizeof(var_container_t));
+  var_container_t result;
+  int index = 0;
+
+  log("Eval %s\n", node->name);
+  for (node_t* curr = node->children; curr; curr = curr->siblings) {
+    var_container_t var = eval_node(curr);
+
+    below[index++] = var;
+  }
+
+  if (strcmp(node->name, "integer") == 0) {
+    result = eval_integer(node, below);
+  }
+  else if (strcmp(node->name, "var") == 0) {
+    result = eval_var(node, below);
+  }
+  else if (strcmp(node->name, "print") == 0) {
+    result = eval_print(node, below);
+  }
+
+  free(below);
+  return result;
 }
 
 // Preorder traversal
@@ -123,28 +241,29 @@ void print_node(node_t *node, int indent) {
   }
 
   for (int i = 0; i < indent; i++) {
-    printf(" ");
+    log(" ");
   }
 
   if (node->name) {
-    printf("%s", node->name);
+    log("%s", node->name);
   } else if (node->nbr) {
-    printf("%d", *(node->nbr));
+    log("%d", *(node->nbr));
   }
 
   for (node_t* curr = node->attributes; curr; curr = curr->siblings) {
-    printf(" %s=", curr->name);
+    log(" %s=", curr->name);
     node_t* val = curr->children;
     if (val->name) {
-      printf("%s\n", val->name);
+      log("%s\n", val->name);
     } else if (val->nbr) {
-      printf("%d\n", *(val->nbr));
-    } else {
-      printf("");
+      log("%d\n", *(val->nbr));
     }
+    // } else {
+    //   log("");
+    // }
   }
 
-  printf("\n");
+  log("\n");
   for (node_t* curr = node->children; curr; curr = curr->siblings) {
     print_node(curr, indent + 4);
   }
@@ -153,7 +272,7 @@ void print_node(node_t *node, int indent) {
 node_t* create_node(char *name) {
   node_t* node = (node_t*)malloc(sizeof(node_t));
 
-  printf("[TREE] Creating node with name = %s\n", name);
+  log("[TREE] Creating node with name = %s\n", name);
   node->name = name;
   node->children = node->siblings = NULL;
   node->nbr = NULL;
@@ -197,14 +316,14 @@ void pop(char *value) {
     exit(1);
   }
 
-  printf("Stack pop:  %s\n", value);
+  log("Stack pop:  %s\n", value);
   sp -= 1;
 }
 
 void push(char *value) {
   assert (sp < STACK_SIZE);
 
-  printf("Stack push: %s\n", value);
+  log("Stack push: %s\n", value);
   stack[sp++] = value;
 }
 
