@@ -63,6 +63,8 @@ void print_row(int* row, int len);
 
 int length(node_t* node);
 
+vector_t* create_vector(int rows, int cols);
+
 var_container_t make_integer_container(int integer);
 var_container_t make_vector_container(vector_t* vector);
 
@@ -73,6 +75,8 @@ var_container_t eval_integer(node_t *node, var_container_t* below);
 var_container_t eval_print(node_t *node, var_container_t* below);
 var_container_t eval_var(node_t *node, var_container_t* below);
 var_container_t eval_assign(node_t *node, var_container_t* below);
+var_container_t eval_transpose(node_t *node, var_container_t* below);
+var_container_t eval_dot(node_t *node, var_container_t* below);
 
 %}
 
@@ -159,6 +163,8 @@ void print_row(int* row, int len) {
     for (int i = 0; i < len - 1; i++) {
       printf("%d, ", row[i]);
     }
+  }
+  if (len > 0) {
     printf("%d", row[len - 1]);
   }
   printf("]");
@@ -334,6 +340,72 @@ var_container_t eval_assign(node_t *node, var_container_t* below) {
   return variables[index];
 }
 
+vector_t* create_vector(int rows, int cols) {
+  vector_t *vec = (vector_t*)malloc(sizeof(vector_t));
+
+  vec->rows = rows;
+  vec->cols = cols;
+  vec->data = (int**)malloc(sizeof(int*) * rows);
+  
+  for (int i = 0; i < rows; i++) {
+    vec->data[i] = (int*)malloc(sizeof(int) * cols);
+  }
+  return vec;
+}
+
+var_container_t eval_transpose(node_t *node, var_container_t* below) {
+  if (length(node->children) != 1) {
+    yyerror("Transpose tag must have only one child");
+    return make_integer_container(false);
+  }
+  if (below[0].type != VECTOR) {
+    return below[0];
+  }
+
+  vector_t *vec = below[0].data.vector;
+  vector_t *result = create_vector(vec->cols, vec->rows);
+
+  for (int i = 0; i < vec->rows; i++) {
+    for (int j = 0; j < vec->cols; j++) {
+      result->data[j][i] = vec->data[i][j];
+    }
+  }
+  return make_vector_container(result);
+}
+
+var_container_t eval_dot(node_t *node, var_container_t* below) {
+  if (length(node->children) != 2) {
+    yyerror("Dot tag must have two children");
+    return make_integer_container(false);
+  }
+  if (below[0].type != VECTOR || below[1].type != VECTOR) {
+    return make_vector_container(NULL);
+  }
+
+  vector_t *lo = below[0].data.vector;
+  vector_t *hi = below[1].data.vector;
+
+  if (lo->cols != hi->rows) {
+    yyerror("Invalid shapes for dot product.");
+    return make_vector_container(NULL);
+  }
+
+  vector_t *result = create_vector(lo->rows, hi->cols);
+
+  for (int i = 0; i < result->rows; i++) {
+    for (int j = 0; j < result->cols; j++) {
+      int curr = 0;
+
+      for (int k = 0; k < lo->cols; k++) {
+        curr += lo->data[i][k] * hi->data[k][j];
+      }
+      result->data[i][j] = curr;
+    }
+  }
+
+  return make_vector_container(result);
+}
+
 var_container_t eval_node(node_t* node) {
   if (!node || !node->name) {
     return make_integer_container(false);
@@ -368,6 +440,12 @@ var_container_t eval_node(node_t* node) {
   }
   else if (strcmp(node->name, "assign") == 0) {
     result = eval_assign(node, below);
+  }
+  else if (strcmp(node->name, "transpose") == 0) {
+    result = eval_transpose(node, below);
+  }
+  else if (strcmp(node->name, "dot") == 0) {
+    result = eval_dot(node, below);
   }
 
   free(below);
