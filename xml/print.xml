@@ -1,0 +1,39 @@
+<program>
+  <print>
+    <assign to="x">
+      <integer>29</integer>
+    </assign>
+  </print>
+
+  <print>
+    <var>x</var>
+  </print>
+
+  <print>
+    <integer>
+      8
+    </integer>
+  </print>
+  <integer>3</integer>
+  <print>
+    <integer>
+      200
+    </integer>
+  </print>
+  <print>
+    <vector>
+      <row>
+        <integer>10</integer>
+        <integer>20</integer>
+        <integer>30</integer>
+        <integer>40</integer>
+      </row>
+      <row>
+        <integer>301</integer>
+        <integer>302</integer>
+        <integer>303</integer>
+        <integer>304</integer>
+      </row>
+    </vector>
+  </print>
+</program>

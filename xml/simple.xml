@@ -2,16 +2,18 @@
   <assign to="x">
     <add>
       <var>x</var>
-      <value>4</value>
+      <integer>4</integer>
     </add>
   </assign>
 
   <assign to="v">
     <vector>
-      <value>1</value>
-      <value>2</value>
-      <value>3</value>
-      <value>4</value>
+      <row>
+        <integer>1</integer>
+        <integer>2</integer>
+        <integer>3</integer>
+        <integer>4</integer>
+      </row>
     </vector>
   </assign>
 
@@ -21,10 +23,10 @@
         <var>x</var>
       </size>
       <low>
-        <value>1</value>
+        <integer>1</integer>
       </low>
       <high>
-        <value>5</value>
+        <integer>5</integer>
       </high>
     </generate>
   </assign>
@@ -37,6 +39,6 @@
   </assign>
 
   <return>
-    <value>0</value>
+    <integer>0</integer>
   </return>
 </program>

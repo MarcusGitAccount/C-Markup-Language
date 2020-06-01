@@ -59,7 +59,9 @@ node_t* create_val_nbr(int nbr);
 node_t* create_val_name(char* name);
 void print_node(node_t *node, int indent);
 
-int lenght(node_t* node);
+void print_row(int* row, int len);
+
+int length(node_t* node);
 
 var_container_t make_integer_container(int integer);
 var_container_t make_vector_container(vector_t* vector);
@@ -70,6 +72,7 @@ var_container_t eval_vector(node_t *node, var_container_t* below);
 var_container_t eval_integer(node_t *node, var_container_t* below);
 var_container_t eval_print(node_t *node, var_container_t* below);
 var_container_t eval_var(node_t *node, var_container_t* below);
+var_container_t eval_assign(node_t *node, var_container_t* below);
 
 %}
 
@@ -93,7 +96,12 @@ xml: xml tag { print_node($2, 0); eval_node($2); }
    ;
 
 tag: start inner end             { $$ = $1; $$->children = $2; }
-   | LSTART NAME attributes REND { push($2); pop($2); $$ = create_node($2); $$->attributes = $3; }
+   | LSTART NAME attributes REND { 
+                                    push($2); 
+                                    pop($2); 
+                                    $$ = create_node($2); 
+                                    $$->attributes = $3; 
+                                  }
    ;
 
 inner: tags   { $$ = $1; }
@@ -106,7 +114,11 @@ tags: tag tags  { $1->siblings = $2; $$ = $1; }
     | tag       { $$ = $1; }
     ;
 
-start: LSTART NAME attributes RIGHT  { push($2); $$ = create_node($2); $$->attributes = $3; }
+start: LSTART NAME attributes RIGHT  { 
+                                        push($2); 
+                                        $$ = create_node($2); 
+                                        $$->attributes = $3; 
+                                     }
      ;
 
 end: LEND NAME RIGHT                 { pop($2); }
@@ -131,7 +143,7 @@ void yyerror(char* msg) {
   printf("Syntax error: %s\n", msg);
 }
 
-int lenght(node_t* node) {
+int length(node_t* node) {
   int len = 0;
 
   for (node_t* curr = node; curr; curr = curr->siblings) {
@@ -139,6 +151,17 @@ int lenght(node_t* node) {
   }
 
   return len;
+}
+
+void print_row(int* row, int len) {
+  printf("[");
+  if (len > 1) {
+    for (int i = 0; i < len - 1; i++) {
+      printf("%d, ", row[i]);
+    }
+    printf("%d", row[len - 1]);
+  }
+  printf("]");
 }
 
 var_container_t make_integer_container(int integer) {
@@ -158,8 +181,59 @@ var_container_t make_vector_container(vector_t* vector) {
 }
 
 var_container_t eval_vector(node_t *node, var_container_t* below) {
-  return make_integer_container(true);
+  int len = length(node->children);
+  vector_t *vector = (vector_t*)malloc(sizeof(vector_t));
+  int **data = (int**)malloc(sizeof(int*) * len);
+  int cols = -1;
+
+  for (node_t* curr = node->children; curr; curr = curr->siblings) {
+    if (strcmp(curr->name, "row") != 0) {
+      free(data);
+      free(vector);
+      yyerror("Invalid tag name for vector definition");
+      return make_vector_container(NULL);
+    }
+  }
+
+  for (int i = 0; i < len; i++) {
+    if (cols < 0) {
+      cols = below[i].data.vector->cols;
+    }
+    else if (below[i].data.vector->cols != cols) {
+      yyerror("All vector rows must have the same size");
+      break;
+    }
+
+    data[i] = below[i].data.vector->data[0];
+
+    free(below[i].data.vector->data);
+    free(below[i].data.vector);
+  }
+
+  vector->rows = len;
+  vector->cols = cols;
+  vector->data = data;
+  return make_vector_container(vector);
 }
+
+var_container_t eval_row(node_t *node, var_container_t* below) {
+  vector_t *vector = (vector_t*)malloc(sizeof(vector_t));
+  int **data = (int**)malloc(sizeof(int*));
+
+  vector->rows = 1;
+  vector->cols = length(node->children);
+  data[0] = (int*)malloc(sizeof(int) * vector->cols);
+  for (int i = 0; i < vector->cols; i++) {
+    if (below[i].type != INTEGER) {
+      yyerror("Invalid tag name for row definition");
+      return make_vector_container(NULL);
+    }
+    data[0][i] = below[i].data.integer;
+  }
+  vector->data = data;
+  return make_vector_container(vector);
+}
+
 var_container_t eval_integer(node_t *node, var_container_t* below) {
   if (!node->children->nbr) {
     yyerror("Invalid integer.");
@@ -170,22 +244,43 @@ var_container_t eval_integer(node_t *node, var_container_t* below) {
 }
 
 var_container_t eval_print(node_t *node, var_container_t* below) {
-  int len = lenght(node->children);
+  int len = length(node->children);
 
-  log("Print len: %d", len);
+  log("Print len: %d\n", len);
   if (len != 1) {
     yyerror("Print takes only one argument");
     return make_integer_container(false);
   }
+  
   if (below[0].type == INTEGER) {
+    log("Printing of type %d\n", below[0].type);
     printf("%d\n", below[0].data.integer);
+  } 
+  else if (below[0].type == VECTOR) {
+    if (below[0].data.vector == NULL) {
+      printf("[]\n");
+    }
+    else {
+      printf("[");
+      int rows = below[0].data.vector->rows;
+      for (int i = 0; i < rows - 1; i++) {
+        print_row(below[0].data.vector->data[i], below[0].data.vector->cols);
+        printf(", ");
+      }
+      print_row(below[0].data.vector->data[rows - 1], below[0].data.vector->cols);
+      printf("]\n");
+    }
   }
-
 
   return make_integer_container(true);
 }
 
 var_container_t eval_var(node_t *node, var_container_t* below) {
+  if (!node->children) {
+    yyerror("No variable name specified.");
+    return make_integer_container(false);
+  }
+
   char *name = node->children->name;
 
   if (strlen(name) != 1) {
@@ -198,8 +293,44 @@ var_container_t eval_var(node_t *node, var_container_t* below) {
     return make_integer_container(false);
   }
   
-  int index = node->name[0] - 'a';
+  int index = name[0] - 'a';
 
+  log("RETRIEVING var of type %d\n", variables[index].type);
+  return variables[index];
+}
+
+var_container_t eval_assign(node_t *node, var_container_t* below) {
+  node_t *attr_to = NULL;
+
+  for (node_t* curr = node->attributes; curr; curr = curr->siblings) {
+    if (strcmp(curr->name, "to") == 0) {
+      attr_to = curr;
+      break;
+    }
+  }
+
+  if (!attr_to) {
+    yyerror("Missing attribute to for assignment node.");
+    return make_integer_container(false);
+  }
+
+  char *name = attr_to->children->name;
+
+  if (strlen(name) != 1) {
+    yyerror("Variable name should consist of only one lowercase letter.");
+    return make_integer_container(false);
+  }
+  if (name[0] < 'a' || name[0] > 'z') {
+    yyerror("Variable name should consist of only one lowercase letter.");
+    return make_integer_container(false);
+  }
+  if (length(node->children) != 1) {
+    yyerror("Only one value can be assigned to a variable at once");
+    return make_integer_container(false);
+  }
+
+  int index = name[0] - 'a';
+  variables[index] = below[0];
   return variables[index];
 }
 
@@ -208,9 +339,9 @@ var_container_t eval_node(node_t* node) {
     return make_integer_container(false);
   }
 
-  int len = lenght(node->children);
+  int len = length(node->children);
   var_container_t* below = (var_container_t*)malloc(len * sizeof(var_container_t));
-  var_container_t result;
+  var_container_t result = make_integer_container(true);
   int index = 0;
 
   log("Eval %s\n", node->name);
@@ -228,6 +359,15 @@ var_container_t eval_node(node_t* node) {
   }
   else if (strcmp(node->name, "print") == 0) {
     result = eval_print(node, below);
+  }
+  else if (strcmp(node->name, "row") == 0) {
+    result = eval_row(node, below);
+  }
+  else if (strcmp(node->name, "vector") == 0) {
+    result = eval_vector(node, below);
+  }
+  else if (strcmp(node->name, "assign") == 0) {
+    result = eval_assign(node, below);
   }
 
   free(below);
