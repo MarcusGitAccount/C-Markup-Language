@@ -80,11 +80,30 @@
   </print>
 
   <print>
-    <random rows="2" cols="2" low="1" high="100"/>
+    <assign to="m">
+      <random rows="3" cols="3" low="1" high="4"/>
+    </assign>
   </print>
 
   <print>
-    <random></random>
+    <div>
+      <var>m</var>
+      <var>m</var>
+    </div>
+  </print>
+
+  <print>
+    <div>
+      <var>m</var>
+      <integer>1</integer>
+    </div>
+  </print>
+
+  <print>
+    <div>
+      <integer>-1</integer>
+      <integer>11</integer>
+    </div>
   </print>
 
 </program>

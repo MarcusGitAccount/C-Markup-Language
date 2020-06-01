@@ -44,33 +44,38 @@ typedef struct _var_container {
   vartype_t type;
 } var_container_t;
 
-var_container_t variables[26];
+// typedef int (*base_op_t)(int, int);
 
+var_container_t variables[26];
 char *stack[STACK_SIZE];
 int sp;
 
 void yyerror(char* msg);
+
 char* top();
 void pop(char* value);
 void push(char *value);
 
-node_t* create_node(char *name);
 int* get_int(int n);
-node_t* create_val_nbr(int nbr);
-node_t* create_val_name(char* name);
 void print_node(node_t *node, int indent);
-
 void print_row(int* row, int len);
-
 int length(node_t* node);
 
-vector_t* create_vector(int rows, int cols);
+int add(int a, int b);
+int sub(int a, int b);
+int mul(int a, int b);
+int _div(int a, int b);
 
+node_t* create_node(char *name);
+node_t* create_val_nbr(int nbr);
+node_t* create_val_name(char* name);
+
+vector_t* create_vector(int rows, int cols);
 var_container_t make_integer_container(int integer);
 var_container_t make_vector_container(vector_t* vector);
-
 var_container_t eval_node(node_t* node);
 
+var_container_t eval_basic_op(node_t *node, var_container_t* below, int (*operation)(int, int));
 var_container_t eval_vector(node_t *node, var_container_t* below);
 var_container_t eval_integer(node_t *node, var_container_t* below);
 var_container_t eval_print(node_t *node, var_container_t* below);
@@ -145,8 +150,20 @@ value: NBR  { $$ = create_val_nbr($1); }
 
 %%
 
+int add(int a, int b) { return a + b; }
+int sub(int a, int b) { return a - b; }
+int mul(int a, int b) { return a * b; }
+int _div(int a, int b) { 
+  if (b == 0) {
+    yyerror("Division by 0.");
+    return 0;
+  }
+  return a / b; 
+}
+
 void yyerror(char* msg) {
   printf("Syntax error: %s\n", msg);
+  exit(1);
 }
 
 int length(node_t* node) {
@@ -445,6 +462,66 @@ var_container_t eval_random(node_t *node, var_container_t* below) {
   return make_vector_container(vec);
 }
 
+var_container_t eval_basic_op(node_t *node, var_container_t* below, int (*operation)(int, int)) {
+  if (length(node->children) != 2) {
+    yyerror("Basic operation tag takes two nodes.");
+    return make_integer_container(false);
+  }
+
+  var_container_t lo = below[0];
+  var_container_t hi = below[1];
+
+  if (lo.type == hi.type) {
+    if (lo.type == INTEGER) {
+      int result = operation(lo.data.integer, hi.data.integer);
+
+      return make_integer_container(result);
+    }
+
+    vector_t *l = lo.data.vector;
+    vector_t *h = hi.data.vector;
+    vector_t* result = NULL;
+
+
+    if (l->rows != h->rows || l->cols != h->cols) {
+      yyerror("When performing a base operation between vectors they must have indentical shape.");
+      return make_vector_container(NULL);
+    }
+
+    result =  create_vector(l->rows, l->cols);
+    for (int i = 0; i < result->rows; i++) {
+      for (int j = 0; j < result->cols; j++) {
+        result->data[i][j] = operation(l->data[i][j], h->data[i][j]);
+      }
+    }
+
+    return make_vector_container(result);
+
+  } else {
+    vector_t* vec;
+    int integer;
+    vector_t* result = NULL;
+
+    if (lo.type > hi.type) {
+      vec = hi.data.vector;
+      integer = lo.data.integer;
+    }
+    else {
+      vec = lo.data.vector;
+      integer = hi.data.integer;
+    }
+
+    result = create_vector(vec->rows, vec->cols);
+    for (int i = 0; i < vec->rows; i++) {
+      for (int j = 0; j < vec->cols; j++) {
+        result->data[i][j] = operation(vec->data[i][j], integer);
+      }
+    }
+
+    return make_vector_container(result);
+  }
+}
+
 var_container_t eval_node(node_t* node) {
   if (!node || !node->name) {
     return make_integer_container(false);
@@ -488,6 +565,18 @@ var_container_t eval_node(node_t* node) {
   }
   else if (strcmp(node->name, "random") == 0) {
     result = eval_random(node, below);
+  }
+  else if (strcmp(node->name, "add") == 0) {
+    result = eval_basic_op(node, below, &add);
+  }
+  else if (strcmp(node->name, "sub") == 0) {
+    result = eval_basic_op(node, below, &sub);
+  }
+  else if (strcmp(node->name, "mul") == 0) {
+    result = eval_basic_op(node, below, &mul);
+  }
+  else if (strcmp(node->name, "div") == 0) {
+    result = eval_basic_op(node, below, &_div);
   }
 
   free(below);

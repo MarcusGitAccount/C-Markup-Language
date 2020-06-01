@@ -13,7 +13,7 @@
                   yylval.str = strdup(yytext);
                   return NAME;
                 }
-[0-9]+          {
+"-"*[0-9]+          {
                   yylval.nbr = atoi(yytext);
                   return NBR;
                 }
