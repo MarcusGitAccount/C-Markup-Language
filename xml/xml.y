@@ -3,6 +3,7 @@
 #include <stdlib.h>  
 #include <string.h>  
 #include <assert.h>
+#include <time.h>
 
 #define STACK_SIZE 200
 // #define __LOGGING__ 1
@@ -77,6 +78,7 @@ var_container_t eval_var(node_t *node, var_container_t* below);
 var_container_t eval_assign(node_t *node, var_container_t* below);
 var_container_t eval_transpose(node_t *node, var_container_t* below);
 var_container_t eval_dot(node_t *node, var_container_t* below);
+var_container_t eval_random(node_t *node, var_container_t* below);
 
 %}
 
@@ -406,6 +408,43 @@ var_container_t eval_dot(node_t *node, var_container_t* below) {
   return make_vector_container(result);
 }
 
+var_container_t eval_random(node_t *node, var_container_t* below) {
+  node_t *lo_attr, *hi_attr, *rows_attr, *cols_attr;
+
+  lo_attr = hi_attr = rows_attr = cols_attr = NULL;
+  for (node_t* curr = node->attributes; curr; curr = curr->siblings) {
+    if (strcmp(curr->name, "low") == 0) {
+      lo_attr = curr;
+    }
+    if (strcmp(curr->name, "high") == 0) {
+      hi_attr = curr;
+    }
+    if (strcmp(curr->name, "rows") == 0) {
+      rows_attr = curr;
+    }
+    if (strcmp(curr->name, "cols") == 0) {
+      cols_attr = curr;
+    }
+  }
+
+  int rows = rows_attr ? *(rows_attr->children->nbr) : 1;
+  int cols = cols_attr ? *(cols_attr->children->nbr) : 1;
+  int lo   = lo_attr   ? *(lo_attr->children->nbr) : 1;
+  int hi   = hi_attr   ? *(hi_attr->children->nbr) : 1 << 30;
+
+  vector_t *vec = create_vector(rows, cols);
+  int range = hi - lo;
+
+  srand(time(NULL));
+  for (int i = 0; i < vec->rows; i++) {
+    for (int j = 0; j < vec->cols; j++) {
+      vec->data[i][j] = rand() % range + lo;
+    }
+  }
+
+  return make_vector_container(vec);
+}
+
 var_container_t eval_node(node_t* node) {
   if (!node || !node->name) {
     return make_integer_container(false);
@@ -446,6 +485,9 @@ var_container_t eval_node(node_t* node) {
   }
   else if (strcmp(node->name, "dot") == 0) {
     result = eval_dot(node, below);
+  }
+  else if (strcmp(node->name, "random") == 0) {
+    result = eval_random(node, below);
   }
 
   free(below);
